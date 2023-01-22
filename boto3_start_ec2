@@ -1,0 +1,8 @@
+import boto3
+region = 'eu-west-1'
+instances = ['i-04da6c118baa65b3f', 'i-083e0985a792b79e8']
+ec2 = boto3.client('ec2', region_name=region)
+
+def lambda_handler(event, context):
+    ec2.start_instances(InstanceIds=instances)
+    print('The following EC2 Istances has beeen started: ' + str(instances))
