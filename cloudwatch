@@ -1,0 +1,10 @@
+
+#filter most recurring logs
+fields @timestamp, @message
+| filter @logStream like /<nome-del-log-stream>/
+| filter @level = "ERROR"
+| filter @timestamp >= 'YYYY-MM-DDT00:00:00Z' AND @timestamp <= 'YYYY-MM-DDT23:59:59Z'
+| stats count() by @message
+| sort by _count
+| reverse
+| limit 10
