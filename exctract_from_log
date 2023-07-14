@@ -1,1 +1,70 @@
 sh(script: "aws logs filter-log-events --log-group-name 'log-group-name' --start-time 'start-time' --end-time 'end-time' --filter-pattern 'INFO' | grep 'NOME COGNOME' | awk -F ',' '{print $1}'"
+
+
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Extract Logs') {
+            steps {
+                script {
+                    // Sostituisci 'log-group-name' con il nome del tuo gruppo di log
+                    // e '2023-05-01' e '2023-06-30' con le date di inizio e fine che desideri.
+                    def logs = sh(script: "aws logs start-query --log-group-name 'log-group-name' --start-time \$(date -d '2023-05-01' +%s) --end-time \$(date -d '2023-06-30' +%s) --query-string 'fields @timestamp, @message | filter @message like /INFO/ | sort @timestamp desc' | grep 'NOME COGNOME' | awk -F ',' '{print $1}'", returnStdout: true).trim()
+                    writeFile file: 'logs.txt', text: logs
+                }
+            }
+        }
+
+        stage('Parse Logs') {
+            steps {
+                script {
+                    def ipAddresses = readFile('logs.txt').split('\n')
+                    writeFile file: 'ip_addresses.txt', text: ipAddresses.join('\n')
+                }
+            }
+        }
+
+        stage('Get IP Info') {
+            steps {
+                script {
+                    def ipAddresses = readFile('ip_addresses.txt').split('\n')
+                    def ipInfoList = []
+                    for (ip in ipAddresses) {
+                        def ipInfo = sh(script: "curl ipinfo.io/${ip}", returnStdout: true).trim()
+                        ipInfoList.add(ipInfo)
+                    }
+                    writeFile file: 'ip_info.txt', text: ipInfoList.join('\n')
+                }
+            }
+        }
+
+        stage('Generate CSV') {
+            steps {
+                script {
+                    def generatorScript = '''
+import csv
+import json
+
+with open('ip_info.txt', 'r') as file:
+    ipInfos = file.readlines()
+
+data = [['Nome Utente', 'Indirizzo IP', 'Numero di Chiamate', 'Città', 'Regione', 'Coordinate GPS']]
+
+for ipInfo in ipInfos:
+    info = json.loads(ipInfo)
+    data.append(['NOME COGNOME', info['ip'], 'NUMERO DI CHIAMATE', info['city'], info['region'], info['loc']])
+
+with open('output.csv', 'w', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerows(data)
+'''
+                    writeFile file: 'generator.py', text: generatorScript
+                    sh 'python3 generator.py'
+                }
+            }
+        }
+    }
+}
+
