@@ -1,0 +1,1 @@
+sh(script: "aws logs filter-log-events --log-group-name 'log-group-name' --start-time 'start-time' --end-time 'end-time' --filter-pattern 'INFO' | grep 'NOME COGNOME' | awk -F ',' '{print $1}'"
