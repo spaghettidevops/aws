@@ -1,0 +1,14 @@
+{
+  "Sid": "LambdaPermission",
+  "Effect": "Allow",
+  "Principal": {
+    "Service": "lambda.amazonaws.com"
+  },
+  "Action": "SNS:Publish",
+  "Resource": "arn:aws:sns:topic",
+  "Condition": {
+    "ArnLike": {
+      "aws:SourceArn": "arn:aws:lambda:REGION:ACCOUNT-ID:function:lambda"
+    }
+  }
+}
