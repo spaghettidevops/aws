@@ -1,0 +1,34 @@
+import os
+import json
+import gzip
+import base64
+import boto3
+
+def handler(event, context):
+    SNS_TOPIC = os.environ.get("SNS_TOPIC", None)
+    if SNS_TOPIC is None:
+        print("SNS topic not found in env. var --> Exiting.")
+        return
+
+    try:
+        logData = str(
+            gzip.decompress(base64.b64decode(
+                event["awslogs"]["data"])), "utf-8"
+        )
+        jsonBody = json.loads(logData)
+    except Exception as error:
+        print(f"Failed to retrieve message data: {error}")
+        return
+
+    for logEvent in jsonBody.get("logEvents", []):
+        message = logEvent.get('message')
+        if message:
+            sns_client = boto3.client('sns')
+            response = sns_client.publish(
+                TopicArn=SNS_TOPIC,
+                Message=message,
+                Subject='log filter matched! ',
+            )
+            print(f"SNS response = {response}")
+        else:
+            print(f"Warning: logEvent without 'message' found. logEvent ID: {logEvent.get('id', 'Unknown ID')}")
